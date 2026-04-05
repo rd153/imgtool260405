@@ -80,7 +80,7 @@
                 const minutes = pad(now.getMinutes());
                 const seconds = pad(now.getSeconds());
 
-                const fileName = `IMG_${year}${month}_${day}${hours}${minutes}${seconds}.jpg`;
+                const fileName = `IMG_${year}${month}${day}_${hours}${minutes}${seconds}.jpg`;
 
                 // 4. 导出
                 const processedUrl = canvas.toDataURL('image/jpeg', 0.9);
