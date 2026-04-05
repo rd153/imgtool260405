@@ -3,30 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>图片瘦身 PWA</title>
+    <title>图片处理工具</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f4f4f9; }
-        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
-        #preview { max-width: 100%; margin-top: 15px; display: none; border-radius: 8px; }
-        button, label { background: #007bff; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; border: none; margin-top: 10px; display: inline-block; }
-        #downloadBtn { background: #28a745; display: none; text-decoration: none; }
+        :root { --primary: #0070f3; --success: #0070f3; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #fafafa; color: #333; }
+        .container { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-width: 450px; width: 100%; text-align: center; }
+        .input-group { margin: 20px 0; text-align: left; }
+        label { font-size: 14px; font-weight: 600; color: #666; display: block; margin-bottom: 8px; }
+        input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        .upload-area { border: 2px dashed #ddd; padding: 20px; border-radius: 12px; cursor: pointer; transition: border 0.3s; }
+        .upload-area:hover { border-color: var(--primary); }
+        #preview { max-width: 100%; margin-top: 20px; border-radius: 8px; display: none; border: 1px solid #eee; }
+        .btn { background: var(--primary); color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; border: none; margin-top: 15px; display: none; text-decoration: none; font-weight: 500; }
         input[type="file"] { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>图片处理器</h2>
-    <p>自动调整宽度至 1240px 并清除 EXIF</p>
+    <h2>图片瘦身工具</h2>
     
-    <input type="file" id="upload" accept="image/jpeg">
-    <label for="upload">选择 JPG 图片</label>
+    <div class="input-group">
+        <label>目标宽度 (px)</label>
+        <input type="number" id="targetWidth" value="1240" placeholder="例如: 1240">
+    </div>
+
+    <div class="upload-area" onclick="document.getElementById('upload').click()">
+        <p id="tip">点击或拖入 JPG 图片</p>
+        <input type="file" id="upload" accept="image/jpeg">
+    </div>
     
     <canvas id="canvas" style="display:none;"></canvas>
-    <img id="preview" alt="预览">
+    <img id="preview">
     
-    <a id="downloadBtn">下载处理后的图片</a>
+    <a id="downloadBtn" class="btn">下载处理后的图片</a>
 </div>
 
 <script>
@@ -34,9 +45,10 @@
     const canvas = document.getElementById('canvas');
     const preview = document.getElementById('preview');
     const downloadBtn = document.getElementById('downloadBtn');
+    const widthInput = document.getElementById('targetWidth');
 
-    upload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
+    function processImage() {
+        const file = upload.files[0];
         if (!file) return;
 
         const reader = new FileReader();
@@ -45,28 +57,32 @@
             img.onload = () => {
                 const ctx = canvas.getContext('2d');
                 
-                // 1. 计算比例，设置宽度为 1240
-                const targetWidth = 1240;
+                // 1. 获取手动设置的宽度
+                const targetWidth = parseInt(widthInput.value) || img.width;
                 const scale = targetWidth / img.width;
                 const targetHeight = img.height * scale;
 
                 canvas.width = targetWidth;
                 canvas.height = targetHeight;
 
-                // 2. 绘图到 Canvas (此过程会自动丢弃原始 EXIF 信息)
+                // 2. 绘制并抹除 EXIF
                 ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-                // 3. 生成文件名: IMG_YYYYMM_DDHHMMSS.jpg
+                // 3. 修正日期时区问题
                 const now = new Date();
-                const timestamp = now.getFullYear() + 
-                                  String(now.getMonth() + 1).padStart(2, '0') + "_" +
-                                  String(now.getDate()).padStart(2, '0') + 
-                                  String(now.getHours()).padStart(2, '0') + 
-                                  String(now.getMinutes()).padStart(2, '0') + 
-                                  String(now.getSeconds()).padStart(2, '0');
-                const fileName = `IMG_${timestamp}.jpg`;
+                const pad = (n) => String(n).padStart(2, '0');
+                
+                // 获取本地时间各部分
+                const year = now.getFullYear();
+                const month = pad(now.getMonth() + 1);
+                const day = pad(now.getDate());
+                const hours = pad(now.getHours());
+                const minutes = pad(now.getMinutes());
+                const seconds = pad(now.getSeconds());
 
-                // 4. 转为 DataURL 并准备下载
+                const fileName = `IMG_${year}${month}_${day}${hours}${minutes}${seconds}.jpg`;
+
+                // 4. 导出
                 const processedUrl = canvas.toDataURL('image/jpeg', 0.9);
                 preview.src = processedUrl;
                 preview.style.display = 'block';
@@ -74,16 +90,21 @@
                 downloadBtn.href = processedUrl;
                 downloadBtn.download = fileName;
                 downloadBtn.style.display = 'inline-block';
+                document.getElementById('tip').innerText = "已选择: " + file.name;
             };
             img.src = event.target.result;
         };
         reader.readAsDataURL(file);
-    });
+    }
 
-    // 注册 Service Worker 使其成为 PWA
+    // 监听文件上传和宽度变化
+    upload.addEventListener('change', processImage);
+    widthInput.addEventListener('change', processImage);
+
+    // 简单的 PWA 注册
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed', err));
+            navigator.serviceWorker.register('sw.js').catch(() => {});
         });
     }
 </script>
