@@ -88,19 +88,18 @@
 
                 const fileName = `IMG_${year}${month}${day}_${hours}${minutes}${seconds}.jpg`;
 
-                // 4. 预览图使用 Base64 DataURL，保证页面显示和长按保存最稳定
+                // 4. 预览图使用 DataURL，方便展示与长按保存
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
                 preview.src = dataUrl;
                 preview.style.display = 'block';
 
-                // 5. 释放上一次创建的 URL 对象（释放内存）
+                // 5. 释放上一次创建的 URL 对象
                 if (currentObjectURL) {
                     URL.revokeObjectURL(currentObjectURL);
                 }
 
-                // 6. 核心兼容调整：导出为带名字的 File 对象 Blob URL
+                // 6. 核心兼容：导出为带名字的 File 对象 Blob URL，传给下载按钮
                 canvas.toBlob((blob) => {
-                    // 将 Blob 转为带 Name 属性的 File 对象（能更好地穿透 Via/X浏览器的下载引擎）
                     const imageFile = new File([blob], fileName, { type: 'image/jpeg' });
                     currentObjectURL = URL.createObjectURL(imageFile);
 
@@ -115,21 +114,6 @@
         };
         reader.readAsDataURL(file);
     }
-
-    // 点击下载时的移动端强制兼容逻辑
-    downloadBtn.addEventListener('click', (e) => {
-        const isAndroid = /Android/i.test(navigator.userAgent);
-        // 如果是在安卓环境，尝试通过动态 A 标签触发
-        if (isAndroid) {
-            const tempLink = document.createElement('a');
-            tempLink.href = downloadBtn.href;
-            tempLink.download = downloadBtn.download;
-            tempLink.setAttribute('target', '_blank');
-            document.body.appendChild(tempLink);
-            tempLink.click();
-            document.body.removeChild(tempLink);
-        }
-    });
 
     // 监听文件上传和宽度变化
     upload.addEventListener('change', processImage);
