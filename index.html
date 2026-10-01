@@ -16,7 +16,6 @@
         .upload-area:hover { border-color: var(--primary); }
         #preview { max-width: 100%; margin-top: 20px; border-radius: 8px; display: none; border: 1px solid #eee; }
         .btn { background: var(--primary); color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; border: none; margin-top: 15px; display: none; text-decoration: none; font-weight: 500; }
-        .tip-sub { font-size: 12px; color: #888; margin-top: 8px; display: none; }
         input[type="file"] { display: none; }
     </style>
 </head>
@@ -39,7 +38,6 @@
     <img id="preview">
     
     <a id="downloadBtn" class="btn">下载处理后的图片</a>
-    <div id="subTip" class="tip-sub">提示：若手机浏览器未能自动命名，可直接长按上方图片保存为 JPG</div>
 </div>
 
 <script>
@@ -48,7 +46,6 @@
     const preview = document.getElementById('preview');
     const downloadBtn = document.getElementById('downloadBtn');
     const widthInput = document.getElementById('targetWidth');
-    const subTip = document.getElementById('subTip');
 
     let currentObjectURL = null;
 
@@ -88,17 +85,17 @@
 
                 const fileName = `IMG_${year}${month}${day}_${hours}${minutes}${seconds}.jpg`;
 
-                // 4. 预览图使用 DataURL，方便展示与长按保存
+                // 4. 预览图显示
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
                 preview.src = dataUrl;
                 preview.style.display = 'block';
 
-                // 5. 释放上一次创建的 URL 对象
+                // 5. 释放之前的内存对象
                 if (currentObjectURL) {
                     URL.revokeObjectURL(currentObjectURL);
                 }
 
-                // 6. 核心兼容：导出为带名字的 File 对象 Blob URL，传给下载按钮
+                // 6. 生成包装了文件名的 File Blob 对象
                 canvas.toBlob((blob) => {
                     const imageFile = new File([blob], fileName, { type: 'image/jpeg' });
                     currentObjectURL = URL.createObjectURL(imageFile);
@@ -106,7 +103,6 @@
                     downloadBtn.href = currentObjectURL;
                     downloadBtn.download = fileName;
                     downloadBtn.style.display = 'inline-block';
-                    subTip.style.display = 'block';
                     document.getElementById('tip').innerText = "已选择: " + file.name;
                 }, 'image/jpeg', 0.9);
             };
