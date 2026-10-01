@@ -26,12 +26,12 @@
     
     <div class="input-group">
         <label>目标宽度 (px)</label>
-        <input type="number" id="targetWidth" value="1240" placeholder="例如: 1240">
+        <input type="number" id="targetWidth" value="1280" placeholder="例如: 1280">
     </div>
 
     <div class="upload-area" onclick="document.getElementById('upload').click()">
-        <p id="tip">点击或拖入 JPG 图片</p>
-        <input type="file" id="upload" accept="image/jpeg">
+        <p id="tip">点击或拖入 JPG/PNG 图片</p>
+        <input type="file" id="upload" accept="image/jpeg,image/png">
     </div>
     
     <canvas id="canvas" style="display:none;"></canvas>
@@ -65,7 +65,9 @@
                 canvas.width = targetWidth;
                 canvas.height = targetHeight;
 
-                // 2. 绘制并抹除 EXIF
+                // 2. 填充白色背景（防止PNG透明区域变黑）并绘制图片
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, targetWidth, targetHeight);
                 ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
                 // 3. 修正日期时区问题
@@ -82,15 +84,17 @@
 
                 const fileName = `IMG_${year}${month}${day}_${hours}${minutes}${seconds}.jpg`;
 
-                // 4. 导出
-                const processedUrl = canvas.toDataURL('image/jpeg', 0.9);
-                preview.src = processedUrl;
-                preview.style.display = 'block';
-                
-                downloadBtn.href = processedUrl;
-                downloadBtn.download = fileName;
-                downloadBtn.style.display = 'inline-block';
-                document.getElementById('tip').innerText = "已选择: " + file.name;
+                // 4. 以 Blob 形式导出，确保下载及文件名后缀严格为 .jpg
+                canvas.toBlob((blob) => {
+                    const processedUrl = URL.createObjectURL(blob);
+                    preview.src = processedUrl;
+                    preview.style.display = 'block';
+                    
+                    downloadBtn.href = processedUrl;
+                    downloadBtn.download = fileName;
+                    downloadBtn.style.display = 'inline-block';
+                    document.getElementById('tip').innerText = "已选择: " + file.name;
+                }, 'image/jpeg', 0.9);
             };
             img.src = event.target.result;
         };
