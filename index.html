@@ -65,12 +65,12 @@
                 canvas.width = targetWidth;
                 canvas.height = targetHeight;
 
-                // 2. 填充白色背景（防止PNG透明区域变黑）并绘制图片
+                // 2. 填充白色背景（兼容 PNG 透明底转 JPG 时不变黑）并绘制图片
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(0, 0, targetWidth, targetHeight);
                 ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-                // 3. 修正日期时区问题
+                // 3. 修正日期时区问题，生成文件名
                 const now = new Date();
                 const pad = (n) => String(n).padStart(2, '0');
                 
@@ -84,17 +84,15 @@
 
                 const fileName = `IMG_${year}${month}${day}_${hours}${minutes}${seconds}.jpg`;
 
-                // 4. 以 Blob 形式导出，确保下载及文件名后缀严格为 .jpg
-                canvas.toBlob((blob) => {
-                    const processedUrl = URL.createObjectURL(blob);
-                    preview.src = processedUrl;
-                    preview.style.display = 'block';
-                    
-                    downloadBtn.href = processedUrl;
-                    downloadBtn.download = fileName;
-                    downloadBtn.style.display = 'inline-block';
-                    document.getElementById('tip').innerText = "已选择: " + file.name;
-                }, 'image/jpeg', 0.9);
+                // 4. 使用 DataURL 导出（解决安卓 Via 等浏览器下 Blob URL 导致文件名变随机串及扩展名变为 jpeg 的问题）
+                const processedUrl = canvas.toDataURL('image/jpeg', 0.9);
+                preview.src = processedUrl;
+                preview.style.display = 'block';
+                
+                downloadBtn.href = processedUrl;
+                downloadBtn.download = fileName;
+                downloadBtn.style.display = 'inline-block';
+                document.getElementById('tip').innerText = "已选择: " + file.name;
             };
             img.src = event.target.result;
         };
