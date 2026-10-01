@@ -16,6 +16,7 @@
         .upload-area:hover { border-color: var(--primary); }
         #preview { max-width: 100%; margin-top: 20px; border-radius: 8px; display: none; border: 1px solid #eee; }
         .btn { background: var(--primary); color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; border: none; margin-top: 15px; display: none; text-decoration: none; font-weight: 500; }
+        .tip-sub { font-size: 12px; color: #888; margin-top: 8px; display: none; }
         input[type="file"] { display: none; }
     </style>
 </head>
@@ -38,6 +39,7 @@
     <img id="preview">
     
     <a id="downloadBtn" class="btn">下载处理后的图片</a>
+    <div id="subTip" class="tip-sub">提示：若手机浏览器未能自动命名，可直接长按上方图片保存为 JPG</div>
 </div>
 
 <script>
@@ -46,6 +48,9 @@
     const preview = document.getElementById('preview');
     const downloadBtn = document.getElementById('downloadBtn');
     const widthInput = document.getElementById('targetWidth');
+    const subTip = document.getElementById('subTip');
+
+    let currentObjectURL = null;
 
     function processImage() {
         const file = upload.files[0];
@@ -65,7 +70,7 @@
                 canvas.width = targetWidth;
                 canvas.height = targetHeight;
 
-                // 2. 填充白色背景（防止 PNG 透明区域转 JPG 时变黑）
+                // 2. 填充白色背景（兼容 PNG 透明底转 JPG 不变黑）
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(0, 0, targetWidth, targetHeight);
                 ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
@@ -83,21 +88,48 @@
 
                 const fileName = `IMG_${year}${month}${day}_${hours}${minutes}${seconds}.jpg`;
 
-                // 4. 使用 DataURL 导出（解决移动端系统下载管理器丢失文件名和强制后缀为 .jpeg 的问题）
-                const processedUrl = canvas.toDataURL('image/jpeg', 0.9);
-                
-                preview.src = processedUrl;
+                // 4. 预览图使用 Base64 DataURL，保证页面显示和长按保存最稳定
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                preview.src = dataUrl;
                 preview.style.display = 'block';
-                
-                downloadBtn.href = processedUrl;
-                downloadBtn.download = fileName;
-                downloadBtn.style.display = 'inline-block';
-                document.getElementById('tip').innerText = "已选择: " + file.name;
+
+                // 5. 释放上一次创建的 URL 对象（释放内存）
+                if (currentObjectURL) {
+                    URL.revokeObjectURL(currentObjectURL);
+                }
+
+                // 6. 核心兼容调整：导出为带名字的 File 对象 Blob URL
+                canvas.toBlob((blob) => {
+                    // 将 Blob 转为带 Name 属性的 File 对象（能更好地穿透 Via/X浏览器的下载引擎）
+                    const imageFile = new File([blob], fileName, { type: 'image/jpeg' });
+                    currentObjectURL = URL.createObjectURL(imageFile);
+
+                    downloadBtn.href = currentObjectURL;
+                    downloadBtn.download = fileName;
+                    downloadBtn.style.display = 'inline-block';
+                    subTip.style.display = 'block';
+                    document.getElementById('tip').innerText = "已选择: " + file.name;
+                }, 'image/jpeg', 0.9);
             };
             img.src = event.target.result;
         };
         reader.readAsDataURL(file);
     }
+
+    // 点击下载时的移动端强制兼容逻辑
+    downloadBtn.addEventListener('click', (e) => {
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        // 如果是在安卓环境，尝试通过动态 A 标签触发
+        if (isAndroid) {
+            const tempLink = document.createElement('a');
+            tempLink.href = downloadBtn.href;
+            tempLink.download = downloadBtn.download;
+            tempLink.setAttribute('target', '_blank');
+            document.body.appendChild(tempLink);
+            tempLink.click();
+            document.body.removeChild(tempLink);
+        }
+    });
 
     // 监听文件上传和宽度变化
     upload.addEventListener('change', processImage);
