@@ -47,8 +47,6 @@
     const downloadBtn = document.getElementById('downloadBtn');
     const widthInput = document.getElementById('targetWidth');
 
-    let currentObjectURL = null;
-
     function processImage() {
         const file = upload.files[0];
         if (!file) return;
@@ -67,7 +65,7 @@
                 canvas.width = targetWidth;
                 canvas.height = targetHeight;
 
-                // 2. 填充白色背景（兼容 PNG 透明底转 JPG 不变黑）
+                // 2. 填充白色背景（防止 PNG 透明区域转 JPG 时变黑）
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(0, 0, targetWidth, targetHeight);
                 ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
@@ -85,26 +83,16 @@
 
                 const fileName = `IMG_${year}${month}${day}_${hours}${minutes}${seconds}.jpg`;
 
-                // 4. 预览图显示
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                preview.src = dataUrl;
+                // 4. 使用 DataURL 导出（解决移动端系统下载管理器丢失文件名和强制后缀为 .jpeg 的问题）
+                const processedUrl = canvas.toDataURL('image/jpeg', 0.9);
+                
+                preview.src = processedUrl;
                 preview.style.display = 'block';
-
-                // 5. 释放之前的内存对象
-                if (currentObjectURL) {
-                    URL.revokeObjectURL(currentObjectURL);
-                }
-
-                // 6. 生成包装了文件名的 File Blob 对象
-                canvas.toBlob((blob) => {
-                    const imageFile = new File([blob], fileName, { type: 'image/jpeg' });
-                    currentObjectURL = URL.createObjectURL(imageFile);
-
-                    downloadBtn.href = currentObjectURL;
-                    downloadBtn.download = fileName;
-                    downloadBtn.style.display = 'inline-block';
-                    document.getElementById('tip').innerText = "已选择: " + file.name;
-                }, 'image/jpeg', 0.9);
+                
+                downloadBtn.href = processedUrl;
+                downloadBtn.download = fileName;
+                downloadBtn.style.display = 'inline-block';
+                document.getElementById('tip').innerText = "已选择: " + file.name;
             };
             img.src = event.target.result;
         };
